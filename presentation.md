@@ -130,6 +130,8 @@ MapVariables(logline) ==
 Note: If a variable changes isn’t logged, `TraceSpec` just let TLC search for all possible values of this
 variable according to base spec (see TRUE).
 
+
+
 # Trace specification - variables update and mapping
 
  - Variable updates was made by applying 1 or more operators on it
@@ -314,3 +316,31 @@ events and variable updates)
 - Merge trace files that was produced by different processes
 - Execute TLC on the trace spec for a given trace file in order to
 make validation
+
+# Results
+
+ - Identification of some bugs:
+    - KeyValueStore
+        - Identify forgotten conditions / guards (3 cases)
+    - Raft
+        - Identification of inattention errors on inequalities (strict instead of non-strict)
+    - Instrumentation
+        - Identify forgotten thread synchronisation (1 case)
+
+ - Bug can be identified very quickly:
+    - Use of `desc` field (give information about the action which has failed)
+    - Get line number of trace that fail (use of TLA+ debugger with trace spec)
+
+# Results
+
+ - Very useful to avoid regression
+ - Very useful when implementing a spec
+    - Allow us to control that implementation respect the spec. at each step
+
+ - Need to know the specification
+    - Especially all the actions (to be able to log all events)
+    - The structure of variables (to be able to update them partially)
+    - The part of the system that is distributed
+
+
+`pandoc -V fontsize=10pt -t beamer -o presentation.pdf presentation.md`
