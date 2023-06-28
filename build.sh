@@ -1,0 +1,1 @@
+pandoc -V fontsize=10pt -t beamer -o presentation.pdf presentation.md

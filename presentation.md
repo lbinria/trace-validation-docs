@@ -342,5 +342,3 @@ make validation
     - The structure of variables (to be able to update them partially)
     - The part of the system that is distributed
 
-
-`pandoc -V fontsize=10pt -t beamer -o presentation.pdf presentation.md`
