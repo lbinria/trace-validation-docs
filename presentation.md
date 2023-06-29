@@ -2,22 +2,22 @@
 
 Development of:
 
-- A generic specification template for trace validation (called trace spec.)
-- A library (called instrumentation) that enable to log events and changes happening on variables
-- A “method” that aims to log implementation properly
+- A generic specification template for trace validation (*trace spec*)
+- A library (*instrumentation*) for logging events and variable updates
+- A “method” based on the above for validating traces of implementations
 
-3 implementations:
+Applied to three case studies:
 
-- Two phase protocol (distributed)
-- Key value store
+- Two-phase protocol (distributed)
+- Key-value store
 - Raft (distributed)
 
 # Raft example - spec
 
-Here an example of a base specification (Raft):
+The base specification (Raft):
 
 ```
-\* Defines how the variables may transition.
+\* Defines the system transitions
 Next == /\ \/ \E i \in Server : Restart(i)
            \/ \E i \in Server : Timeout(i)
            \/ \E i \in Server : BecomeLeader(i)
@@ -29,38 +29,38 @@ Spec == Init /\ [][Next]_vars
 
 # Raft example - trace
 
- - A trace can be seen as a behavior of a system
- - A trace is a sequence of events (atomic TLA+ action)
- - Each event is compound by one or many variable updates 
- - Below an extract of a trace of raft consensus algorithm
+ - A trace records a behavior of a system
+ - A trace is a sequence of events (corresponding to TLA+ actions)
+ - Each event may contain several variable updates
+ - Extract of a trace of Raft:
 
 ```json
 {
-    "clock": 1, 
+    "clock": 1,
     "state": [
-        {"op": "Replace", "path": ["node2"], 
-        "args": ["Candidate"]}], 
+        {"op": "Replace", "path": ["node2"],
+         "args": ["Candidate"]}],
     "desc": "Timeout"
 }
 ...
 {
-    "clock": 26, 
-    "state": [{"op": "Replace", "path": ["node1"], 
-    "args": ["Leader"]}], 
+    "clock": 26,
+    "state": [{"op": "Replace", "path": ["node1"],
+    "args": ["Leader"]}],
     "desc": "BecomeLeader"
 }
 ```
 
 
-# Trace specification - how validate a trace ?
+# Trace specification - how do we validate a trace ?
 
 ![](./trace_spec_schema.JPG)
 
-# Trace specification - how validate a trace ?
+# Trace specification - how do we validate a trace ?
 
- - At least one path of state space graph must lead to the complete reading of trace
- - Use a `POSTCONDITION` (hyperproperty)
- - Allow TLC to have non-deterministric behavior
+ - The trace must correspond to at least one path through the state space graph
+ - Expressed for TLC as a `POSTCONDITION`
+ - Exploit non-determinism of TLA+ specifications
 
 ```
 TraceAccepted ==
@@ -75,15 +75,13 @@ POSTCONDITION
     TraceAccepted
 ```
 
-# Trace specification - how it work ? - spec refinement
-
- - We have to write a trace spec that is a refinement of a base spec (here Raft)
+# Ensure that the trace specification refines the base spec
 
 ```
 (* Temporal formula for trace spec *)
 TraceSpec == TraceInit /\ [][TraceNext]_<<l, vars>>
 
-(* Instanciate raft *)
+(* Instantiate raft *)
 BASE == INSTANCE raft
 BaseSpec == BASE!Init /\ [][BASE!Next \/ ComposedNext]_BASE!vars
 ```
@@ -98,69 +96,66 @@ PROPERTIES
 
 # Trace specification - read trace events
 
- - Read trace line after line (each line is an event)
- - Apply all operations, on all variables found in each events
+ - Read trace one line at a time (each line is an event)
+ - Update variables according to information provided by events
 
 ```
 logline == Trace[l]
 
 ReadNext ==
     (* depth: line number *)
-    /\ l' = l + 1 
+    /\ l' = l + 1
     (* Apply all variable updates *)
-    /\ MapVariables(logline) 
+    /\ MapVariables(logline)
     (* Advance base spec *)
-    /\ BaseSpec::Next 
+    /\ BASE!Next
 ```
 
-# Trace specification - variables update and mapping
-
- - TLC apply all operations to all variables precised in current event 
+# Trace specification - updating variables
 
 ```
 MapVariables(logline) ==
     /\
         IF "state" \in DOMAIN logline
-        THEN state' = ExceptAtPaths(state, "state", logline.state)
+        THEN state' = ExceptAtPaths(state, "state",
+                                    logline.state)
         ELSE TRUE
     /\
         IF "currentTerm" ...
 ```
 
-Note: If a variable changes isn’t logged, `TraceSpec` just let TLC search for all possible values of this
-variable according to base spec (see TRUE).
+If a variable change isn’t logged, `TraceSpec` just lets TLC search for all possible values of this variable according to base spec.
 
 
 
-# Trace specification - variables update and mapping
+# Trace specification - updating variables
 
- - Variable updates was made by applying 1 or more operators on it
- - Operators are generic and defined in trace spec, for example:
+ - Generic operators for updating variables
 
 ```
 Replace(cur, val) == val
 AddElement(cur, val) == cur \cup {val}
-AddElements(cur, vals) == cur \cup ToSet(vals)
+AddElements(cur, vals) == cur \cup vals
 RemoveElement(cur, val) == cur \ {val}
 Clear(cur, val) == {}
 ...
 ```
 
-# Trace specification - variables update and mapping
+# Trace specification - updating variables
 
- - following event:
+The event
 
 ```json
 {
-    "clock": 1, 
+    "clock": 1,
     "state": [
-        {"op": "Replace", "path": ["node2"], 
-        "args": ["Candidate"]}], 
+        {"op": "Replace", "path": ["node2"],
+        "args": ["Candidate"]}],
     "desc": "Timeout"
 }
 ```
 
- - should map variable `state` as following:
+should map variable `state` as following:
 
 ```
 state' = [state EXCEPT !["node2"] = "Candidate"]
@@ -168,14 +163,14 @@ state' = [state EXCEPT !["node2"] = "Candidate"]
 
 
 
-# Trace specification - variables update and mapping
+# Trace specification - updating variables
 
  - A variable can be updated partially at a given path
 
 ```json
 {"matchIndex": [{
-    "op": "Replace", 
-    "path": ["node3", "node2"], 
+    "op": "Replace",
+    "path": ["node3", "node2"],
     "args": [7]}]}
 ```
 
@@ -184,24 +179,22 @@ state' = [state EXCEPT !["node2"] = "Candidate"]
 matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
 ```
 
-# Trace specification - optimisation
+# Trace specification - optimization
 
- - State space can be largely reduced if we precise the name of the
-next action expected. Action name lead TLC and select directly the expected
-action. Therefore reducing non-deterministic behaviors.
- - Specify action name when logging is recommended but not mandatory
+ - In order to reduce the state space, the trace may indicate the name of the action to be applied.
+ - Specifying action name when logging is not mandatory.
 
 ![](./tlc_lead_schema.JPG)
 
-# Trace specification - optimisation
+# Trace specification - optimization
 
  - For each action contained in base spec we write a corresponding predicate
  - Predicate enable TLC to select next expected action when `IsEvent` is `TRUE`
 
 ```
 IsEvent(e) ==
-    /\ IF "desc" \in DOMAIN logline 
-        THEN logline.desc = e ELSE TRUE
+    /\ IF "desc" \in DOMAIN logline
+       THEN logline.desc = e ELSE TRUE
 
 IsRestart ==
     /\ IsEvent("Restart")
@@ -213,7 +206,7 @@ IsTimeout ==
 ...
 ```
 
-# Trace specification - optimisation
+# Trace specification - optimization
 
  - next action of trace spec is just the disjunction of all predicates
 
@@ -227,8 +220,8 @@ TraceNext ==
 
 # Instrumentation - purpose
 
-- Aims to generate a trace by logging some events
-- Aims to log event and variable changes
+- Generate a trace by logging some events
+- Log event and variable changes
 
 Trace example:
 
@@ -244,13 +237,11 @@ Trace example:
 
 # Instrumentation - How to log
 
-1. We have to log events: log all commits is necessary because TLC cannot fill holes in
-events
-2. We have to log variable changes: log of all variables isn’t necessary, but more variables we log,
-more the statespace reduce, and more we are confident in the
-implementation
+1. We have to log all events that correspond to actions of the base spec: TLC will not fill "holes".
+2. Logging all variable updates is not necessary, but the more variables we log,
+the smaller is the state space explored by TLC, and the more confident we are in the implementation
 
-# Instrumentation - log event
+# Instrumentation - log events
 
 Example of log “Timeout” event in Raft:
 
@@ -262,15 +253,15 @@ public void timeout() {
 }
 ```
 
-# Instrumentation - log variables
+# Instrumentation - logging variables
 
-The idea is to log variable updates like you manipulate directly the
-specification’s variables.
+The idea is to log variable updates whenever a variable corresponding to a specification variable is modified.
 
-Declare spec variable example:
+Declare spec variable:
 
 ```java
-this.spec = new TraceInstrumentation(nodeInfo.name() + ".ndjson", clock);
+this.spec = new TraceInstrumentation(nodeInfo.name()
+                                     + ".ndjson", clock);
 // Binding to variable state at path nodeName (state[nodeName ])
 this.specState = spec.getVariable("state")
                      .getField(nodeInfo.name());
@@ -278,9 +269,9 @@ this.specVotesGranted = spec.getVariable("votesGranted")
                      .getField(nodeInfo.name());
 ```
 
-# Instrumentation - log variables
+# Instrumentation - logging variables
 
-Log variable changes example:
+Log variable changes:
 
 ```java
 private void setState(NodeState state) {
@@ -298,44 +289,37 @@ if (m.isGranted()) {
 
 # Instrumentation - clocks
 
-We can use two way to sync clock between distributed processes:
+Two ways of synchronizing clock between distributed processes are supported:
 
- - Lamport clock, we send clock in the message and we call 
-explicitly sync method on logging framework
- - Shared clock, if all the system is executed on the same physical
-machine, all process can share a clock in a memory mapped file: `SharedClock.get(clockName);`
+ - Lamport clock: clocks are sent in messages and we explicitly call
+the sync method of logging framework
+ - Shared clock, if all processes are executed on the same physical
+machine, they can share a clock in a memory mapped file: `SharedClock.get(clockName);`
 
 
 # Execution pipeline
 
-In all our tests we make a script execution pipeline that do the
-following:
+Tests are run as a script execution pipeline:
 
-- Execute implementation (which create a trace file by logging
+- Execute implementation (this creates a trace file by logging
 events and variable updates)
-- Merge trace files that was produced by different processes
-- Execute TLC on the trace spec for a given trace file in order to
-make validation
+- Merge trace files that were produced by different processes
+- Execute TLC on the trace spec for a given trace file
 
-# Results
+# Results: bugs found
 
- - Identification of some bugs:
-    - KeyValueStore
-        - Identify forgotten conditions / guards (3 cases)
-    - Raft
-        - Identification of inattention errors on inequalities (strict instead of non-strict)
-    - Instrumentation
-        - Identify forgotten thread synchronisation (1 case)
+  - KeyValueStore: forgotten conditions / guards (3 cases)
+  - Raft: strict instead of non-strict inequalities
+  - Instrumentation: forgotten thread synchronisation
 
- - Bug can be identified very quickly:
-    - Use of `desc` field (give information about the action which has failed)
-    - Get line number of trace that fail (use of TLA+ debugger with trace spec)
+ - Bugs can be identified very quickly:
+    - Use of `desc` field gives information about the action that failed
+    - Retrieve line number where validation fails and use TLA+ debugger
 
-# Results
+# Results: benefits and limits
 
- - Very useful to avoid regression
- - Very useful when implementing a spec
-    - Allow us to control that implementation respect the spec. at each step
+ - Find bugs in new implementations: events adhere to the specification
+ - Avoid regressions when implementation changes
 
  - Need to know the specification
     - Especially all the actions (to be able to log all events)
