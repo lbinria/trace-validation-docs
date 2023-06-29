@@ -166,19 +166,23 @@ The event
 ```json
 {
     "clock": 1,
-    "state": [
-        {"op": "Replace", "path": ["node2"],
-        "args": ["Candidate"]}],
+    "state": [ {"op": "Replace", 
+                "path": ["node2"],
+                "args": ["Candidate"]}  ],
     "desc": "Timeout"
 }
 ```
 
-should map variable `state` as following:
+should map the variable `state` as follows:
 
 ```
+<<<<<<< HEAD
 state' = ExceptAtPaths(state, "state", logline.state)
 <=> state' = [state EXCEPT !["node2"] = Replace(@, "Candidate")] 
 <=> state' = [state EXCEPT !["node2"] = "Candidate"]
+=======
+  state' = [state EXCEPT !["node2"] = "Candidate"]
+>>>>>>> horatiu
 ```
 
 
@@ -187,15 +191,14 @@ state' = ExceptAtPaths(state, "state", logline.state)
  - A variable can be updated partially at a given path
 
 ```json
-{"matchIndex": [{
-    "op": "Replace",
-    "path": ["node3", "node2"],
-    "args": [7]}]}
+{"matchIndex": [ {"op": "Replace",
+                  "path": ["node3", "node2"],
+                  "args": [7]}]}
 ```
 
  - This update will be automatically translated to:
 ```
-matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
+   matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
 ```
 
 # Trace specification - updating variables
