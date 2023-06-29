@@ -8,9 +8,9 @@ Development of:
 
 Applied to three case studies:
 
-- Two-phase protocol (distributed)
+- Two-phase protocol
 - Key-value store
-- Raft (distributed)
+- Raft
 
 # Raft example - spec
 
@@ -312,11 +312,12 @@ Example of log “Timeout” event in Raft:
 public void timeout() {
     assert state == NodeState.Follower;
     ...
-    // To candidate
-    state = NodeState.Candidate;
-    specState.set(state.toString());
-    ...
-    spec.commitChanges("Timeout");
+    state = NodeState.Candidate; // Impl
+    specState.set("oops"); // Spec
+    specState.set(state.toString()); // Spec
+    votesGranted.add(nodeInfo.name()); // Impl
+    specVotesGranted.add(nodeInfo.name()); // Spec
+    spec.commitChanges("Timeout"); // Commit modifications batch
 }
 ```
 # Instrumentation - log events
@@ -328,7 +329,14 @@ Will produce one event:
     "clock": 15, 
     "state": [{"op": "Replace", 
         "path": ["node1"], 
-        "args": ["Candidate"]}], 
+        "args": ["oops"]},
+        {"op": "Replace", 
+        "path": ["node1"], 
+        "args": ["Candidate"]}
+    ], 
+    "votesGranted": [{"op": "AddElement", 
+        "path": ["node1"], 
+        "args": ["node1"]}], 
     "desc": "Timeout"
 }
 ```
