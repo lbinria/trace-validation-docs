@@ -117,8 +117,7 @@ ReadNext ==
 MapVariables(logline) ==
     /\
         IF "state" \in DOMAIN logline
-        THEN state' = ExceptAtPaths(state, "state",
-                                    logline.state)
+        THEN state' = ExceptAtPaths(state, logline.state)
         ELSE TRUE
     /\
         IF "currentTerm" ...
@@ -153,7 +152,8 @@ RECURSIVE ExceptAtPath(_,_,_,_,_)
 LOCAL ExceptAtPath(var, default, path, op, args) ==
     LET h == Head(path) IN
     IF Len(path) > 1 THEN
-        [var EXCEPT ![h] = ExceptAtPath(var[h], default[h], Tail(path), op, args)]
+        [var EXCEPT ![h] = 
+          ExceptAtPath(var[h], default[h], Tail(path), op, args)]
     ELSE
         [var EXCEPT ![h] = Apply(@, default[h], op, args)]
 ```
@@ -175,7 +175,7 @@ The event
 should map variable `state` as following:
 
 ```
-state' = ExceptAtPaths(state, "state", logline.state)
+state' = ExceptAtPaths(state, logline.state)
 <=> state' = [state EXCEPT !["node2"] = Replace(@, "Candidate")] 
 <=> state' = [state EXCEPT !["node2"] = "Candidate"]
 ```
@@ -208,7 +208,7 @@ matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
     "clock": 1,
     "mySet": [
         {"op": "AddElement", "path": [],
-        "args": [4]}],
+        "args": [4]},
         {"op": "AddElement", "path": [],
         "args": [5]}]
     ...
