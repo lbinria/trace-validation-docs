@@ -118,8 +118,7 @@ ReadNext ==
 MapVariables(logline) ==
     /\
         IF "state" \in DOMAIN logline
-        THEN state' = ExceptAtPaths(state, "state",
-                                    logline.state)
+        THEN state' = ExceptAtPaths(state, logline.state)
         ELSE TRUE
     /\
         IF "currentTerm" ...
@@ -154,8 +153,8 @@ RECURSIVE ExceptAtPath(_,_,_,_,_)
 LOCAL ExceptAtPath(var, default, path, op, args) ==
     LET h == Head(path) IN
     IF Len(path) > 1 THEN
-        [var EXCEPT ![h] = ExceptAtPath(var[h], default[h], 
-                                        Tail(path), op, args)]
+        [var EXCEPT ![h] = 
+          ExceptAtPath(var[h], default[h], Tail(path), op, args)]
     ELSE
         [var EXCEPT ![h] = Apply(@, default[h], op, args)]
 ```
@@ -177,7 +176,7 @@ The event
 should map the variable `state` as follows:
 
 ```
-state' = ExceptAtPaths(state, "state", logline.state)
+state' = ExceptAtPaths(state, logline.state)
 <=> 
 state' = [state EXCEPT !["node2"] = Replace(@, "Candidate")] 
 <=> 
@@ -269,8 +268,8 @@ TraceNext ==
 
 Purpose:
 
-* Generate a trace by logging some events
-* Log variable changes and potentially the event name 
+  * Generate a trace by logging some events
+  * Log variable changes and potentially the event name 
 
 Method
 
