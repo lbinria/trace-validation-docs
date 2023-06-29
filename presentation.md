@@ -17,7 +17,7 @@ Development of:
 Here an example of a base specification (Raft):
 
 ```
-\* Defines how the variables may transition.
+\* Defines how the variables may evolve.
 Next == /\ \/ \E i \in Server : Restart(i)
            \/ \E i \in Server : Timeout(i)
            \/ \E i \in Server : BecomeLeader(i)
@@ -30,23 +30,24 @@ Spec == Init /\ [][Next]_vars
 # Raft example - trace
 
  - A trace can be seen as a behavior of a system
- - A trace is a sequence of events (atomic TLA+ action)
- - Each event is compound by one or many variable updates 
- - Below an extract of a trace of raft consensus algorithm
+ - A trace is a sequence of events (atomic TLA+ actions)
+ - Each event consists of one or several variable updates 
+ - Below, an excerpt from a trace of raft consensus algorithm
 
 ```json
 {
     "clock": 1, 
-    "state": [
-        {"op": "Replace", "path": ["node2"], 
-        "args": ["Candidate"]}], 
+    "state": [ {"op": "Replace", 
+                "path": ["node2"], 
+                "args": ["Candidate"]}  ], 
     "desc": "Timeout"
 }
 ...
 {
     "clock": 26, 
-    "state": [{"op": "Replace", "path": ["node1"], 
-    "args": ["Leader"]}], 
+    "state": [ {"op": "Replace", 
+                "path": ["node1"], 
+                "args": ["Leader"]}  ], 
     "desc": "BecomeLeader"
 }
 ```
