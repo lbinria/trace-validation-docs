@@ -36,17 +36,18 @@ Spec == Init /\ [][Next]_vars
 
 ```json
 {
-    "clock": 1,
-    "state": [
-        {"op": "Replace", "path": ["node2"],
-         "args": ["Candidate"]}],
+    "clock": 1, 
+    "state": [ {"op": "Replace", 
+                "path": ["node2"], 
+                "args": ["Candidate"]}  ], 
     "desc": "Timeout"
 }
 ...
 {
-    "clock": 26,
-    "state": [{"op": "Replace", "path": ["node1"],
-    "args": ["Leader"]}],
+    "clock": 26, 
+    "state": [ {"op": "Replace", 
+                "path": ["node1"], 
+                "args": ["Leader"]}  ], 
     "desc": "BecomeLeader"
 }
 ```
@@ -165,19 +166,21 @@ The event
 ```json
 {
     "clock": 1,
-    "state": [
-        {"op": "Replace", "path": ["node2"],
-        "args": ["Candidate"]}],
+    "state": [ {"op": "Replace", 
+                "path": ["node2"],
+                "args": ["Candidate"]}  ],
     "desc": "Timeout"
 }
 ```
 
-should map variable `state` as following:
+should map the variable `state` as follows:
 
 ```
 state' = ExceptAtPaths(state, logline.state)
-<=> state' = [state EXCEPT !["node2"] = Replace(@, "Candidate")] 
-<=> state' = [state EXCEPT !["node2"] = "Candidate"]
+<=> 
+state' = [state EXCEPT !["node2"] = Replace(@, "Candidate")] 
+<=> 
+state' = [state EXCEPT !["node2"] = "Candidate"]
 ```
 
 
@@ -186,37 +189,41 @@ state' = ExceptAtPaths(state, logline.state)
  - A variable can be updated partially at a given path
 
 ```json
-{"matchIndex": [{
-    "op": "Replace",
-    "path": ["node3", "node2"],
-    "args": [7]}]}
+{"matchIndex": [ {"op": "Replace",
+                  "path": ["node3", "node2"],
+                  "args": [7]}]}
 ```
 
  - This update will be automatically translated to:
 ```
-matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
+   matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
 ```
 
 # Trace specification - updating variables
 
  - Many operators can be applied in one atomic action
- - Operator are applied to variable sequentially
+ - Operators are applied to variable sequentially
 
 
 ```json
 {
     "clock": 1,
-    "mySet": [
-        {"op": "AddElement", "path": [],
-        "args": [4]},
-        {"op": "AddElement", "path": [],
-        "args": [5]}]
+    "mySet": [ 
+            {"op": "AddElement", 
+             "path": [],
+             "args": [4]} ,
+            {"op": "AddElement", 
+             "path": [],
+             "args": [5]}
+             ]
     ...
 }
 ```
-
 ```
-<=> mySet' = AddElement(AddElement(mySet, 4), 5)
+
+==> 
+
+  mySet' = AddElement(AddElement(mySet, 4), 5)
 ```
 
 # Trace specification - optimization
@@ -260,8 +267,11 @@ TraceNext ==
 # Instrumentation - How to log
 
 Purpose:
-- Generate a trace by logging some events
-- Log event and variable changes
+
+  * Generate a trace by logging some events
+  * Log variable changes and potentially the event name 
+
+Method
 
 1. We have to log all events that correspond to actions of the base spec: TLC will not fill "holes".
 2. Logging all variable updates is not necessary, but the more variables we log,
@@ -290,21 +300,23 @@ Log variable changes:
 ```java
 private void setState(NodeState state) {
     this.state = state;
-    // this.spec.notify(specState, SET, state.toString());
+    // log
     specState.set(state.toString());
+    // ALT: this.spec.notify(specState, SET, state.toString());
 }
 ...
 if (m.isGranted()) {
     // Add node that granted a vote to me
     candidateState.getGranted().add(m.getFrom());
+    // log
     specVotesGranted.add(m.getFrom());
 }
 ```
 
 # Instrumentation - log events
 
- - When we consider an action as complete, we can commit changes
- - Commit changes collect all previously logged variable updates and add one event in trace
+- When we consider an action as complete, we can commit changes
+    * Collect all previously logged variable updates and add one event in trace
 
 Example of log “Timeout” event in Raft:
 
@@ -340,8 +352,6 @@ Will produce one event:
     "desc": "Timeout"
 }
 ```
-
-
 
 # Instrumentation - clocks
 
