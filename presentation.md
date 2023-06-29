@@ -144,6 +144,23 @@ Clear(cur, val) == {}
 
 # Trace specification - updating variables
 
+ - A way for updating records partially
+ - By applying any operator to any member of record
+
+Recursive function below, allow TLC to access and modify a member of a record:
+
+```
+RECURSIVE ExceptAtPath(_,_,_,_,_)
+LOCAL ExceptAtPath(var, default, path, op, args) ==
+    LET h == Head(path) IN
+    IF Len(path) > 1 THEN
+        [var EXCEPT ![h] = ExceptAtPath(var[h], default[h], Tail(path), op, args)]
+    ELSE
+        [var EXCEPT ![h] = Apply(@, default[h], op, args)]
+```
+
+# Trace specification - updating variables
+
 The event
 
 ```json
@@ -159,9 +176,10 @@ The event
 should map variable `state` as following:
 
 ```
-state' = [state EXCEPT !["node2"] = "Candidate"]
+state' = ExceptAtPaths(state, "state", logline.state)
+<=> state' = [state EXCEPT !["node2"] = Replace(@, "Candidate")] 
+<=> state' = [state EXCEPT !["node2"] = "Candidate"]
 ```
-
 
 
 # Trace specification - updating variables
@@ -178,6 +196,28 @@ state' = [state EXCEPT !["node2"] = "Candidate"]
  - This update will be automatically translated to:
 ```
 matchIndex' = [matchIndex EXCEPT !["node3"]["node2"] = 7]
+```
+
+# Trace specification - updating variables
+
+ - Many operators can be applied in one atomic action
+ - Operator are applied to variable sequentially
+
+
+```json
+{
+    "clock": 1,
+    "mySet": [
+        {"op": "AddElement", "path": [],
+        "args": [4]}],
+        {"op": "AddElement", "path": [],
+        "args": [5]}]
+    ...
+}
+```
+
+```
+<=> mySet' = AddElement(AddElement(mySet, 4), 5)
 ```
 
 # Trace specification - optimization
@@ -218,41 +258,15 @@ TraceNext ==
     ...
 ```
 
+# Instrumentation - How to log
 
-# Instrumentation - purpose
-
+Purpose:
 - Generate a trace by logging some events
 - Log event and variable changes
-
-Trace example:
-
-```json
-{
-    "clock": 1,
-    "state": [{"op": "Replace", "path": ["node2"], "args":
-    "commitIndex": [{"op": "Replace", "path": ["node2"], "a
-    "desc": "Restart"
-}
-...
-```
-
-# Instrumentation - How to log
 
 1. We have to log all events that correspond to actions of the base spec: TLC will not fill "holes".
 2. Logging all variable updates is not necessary, but the more variables we log,
 the smaller is the state space explored by TLC, and the more confident we are in the implementation
-
-# Instrumentation - log events
-
-Example of log “Timeout” event in Raft:
-
-```java
-public void timeout() {
-    assert state == NodeState.Follower;
-    ...
-    spec.commitChanges("Timeout");
-}
-```
 
 # Instrumentation - logging variables
 
@@ -287,6 +301,31 @@ if (m.isGranted()) {
     specVotesGranted.add(m.getFrom());
 }
 ```
+
+# Instrumentation - log events
+
+ - When we consider an action as complete, we can commit changes
+ - Commit changes collect all previously logged variable updates and add one event in trace
+
+Example of log “Timeout” event in Raft:
+
+```java
+public void timeout() {
+    assert state == NodeState.Follower;
+    ...
+    spec.commitChanges("Timeout");
+}
+```
+
+```json
+{
+    "clock": 15, 
+    "state": [{"op": "Replace", "path": ["node1"], "args": ["Candidate"]}], 
+    "desc": "Timeout"
+}
+```
+
+
 
 # Instrumentation - clocks
 
@@ -325,5 +364,4 @@ events and variable updates)
  - Need to know the specification
     - Especially all the actions (to be able to log all events)
     - The structure of variables (to be able to update them partially)
-    - The part of the system that is distributed
 
