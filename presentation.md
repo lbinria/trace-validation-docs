@@ -267,9 +267,12 @@ TraceNext ==
 
 # Instrumentation - How to log
 
-- Purpose:
-  * Generate a trace by logging some events
-  * Log variable changes and potentially the event name 
+Purpose:
+
+* Generate a trace by logging some events
+* Log variable changes and potentially the event name 
+
+Method
 
 1. We have to log all events that correspond to actions of the base spec: TLC will not fill "holes".
 2. Logging all variable updates is not necessary, but the more variables we log,
