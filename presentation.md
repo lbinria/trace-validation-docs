@@ -313,14 +313,23 @@ Example of log “Timeout” event in Raft:
 public void timeout() {
     assert state == NodeState.Follower;
     ...
+    // To candidate
+    state = NodeState.Candidate;
+    specState.set(state.toString());
+    ...
     spec.commitChanges("Timeout");
 }
 ```
+# Instrumentation - log events
+
+Will produce one event:
 
 ```json
 {
     "clock": 15, 
-    "state": [{"op": "Replace", "path": ["node1"], "args": ["Candidate"]}], 
+    "state": [{"op": "Replace", 
+        "path": ["node1"], 
+        "args": ["Candidate"]}], 
     "desc": "Timeout"
 }
 ```
